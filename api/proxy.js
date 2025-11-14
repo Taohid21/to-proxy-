@@ -16,9 +16,20 @@ export default async function handler(request) {
   }
 
   try {
-    // মূল URL থেকে ডেটা আনা হচ্ছে
+    // একটি নতুন Headers অবজেক্ট তৈরি করা হচ্ছে
+    const headers = new Headers(request.headers);
+    
+    // ★★★ মূল পরিবর্তন: একটি বাস্তব ব্রাউজারের User-Agent যোগ করা হয়েছে ★★★
+    // এটি ভিডিও সার্ভারকে বোঝাবে যে অনুরোধটি একটি সাধারণ ব্রাউজার থেকে আসছে
+    headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    // কিছু সার্ভারের জন্য অরিজিন এবং রেফারার হেডার মুছে ফেলা প্রয়োজন হতে পারে
+    headers.delete('origin');
+    headers.delete('referer');
+
+    // নতুন হেডারসহ মূল URL থেকে ডেটা আনা হচ্ছে
     const fetchResponse = await fetch(targetUrl, {
-      headers: request.headers,
+      method: request.method,
+      headers: headers,
       redirect: 'follow',
     });
 
@@ -29,7 +40,7 @@ export default async function handler(request) {
       headers: fetchResponse.headers,
     });
 
-    // সবচেয়ে গুরুত্বপূর্ণ: CORS হেডার যোগ করা হচ্ছে
+    // CORS হেডার যোগ করা হচ্ছে
     proxyResponse.headers.set("Access-Control-Allow-Origin", "*");
     proxyResponse.headers.set("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
     proxyResponse.headers.set("Access-Control-Allow-Headers", "*");
