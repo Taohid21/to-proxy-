@@ -1,22 +1,45 @@
-export default async function handler(request, response) {
-  const { url } = request.query;
+// পুরোনো কোড ডিলিট করে এটি পেস্ট করুন
 
-  if (!url) {
-    return response.status(400).send('Error: Please provide a "url" query parameter.');
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(request) {
+  const url = new URL(request.url);
+  const targetUrl = url.searchParams.get("url");
+
+  if (!targetUrl) {
+    return new Response('Error: Please provide a "url" query parameter.', {
+      status: 400,
+      headers: { "Content-Type": "text/plain" },
+    });
   }
 
   try {
-    const fetchResponse = await fetch(url, { headers: { 'User-Agent': 'Vercel-Proxy/1.0' } });
-    
-    // Set CORS headers
-    response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-    
-    // Stream the response body
-    return fetchResponse.body.pipe(response);
-    
+    // মূল URL থেকে ডেটা আনা হচ্ছে
+    const fetchResponse = await fetch(targetUrl, {
+      headers: request.headers,
+      redirect: 'follow',
+    });
+
+    // একটি নতুন Response তৈরি করা হচ্ছে, যা আমরা ব্রাউজারে ফেরত পাঠাব
+    const proxyResponse = new Response(fetchResponse.body, {
+      status: fetchResponse.status,
+      statusText: fetchResponse.statusText,
+      headers: fetchResponse.headers,
+    });
+
+    // সবচেয়ে গুরুত্বপূর্ণ: CORS হেডার যোগ করা হচ্ছে
+    proxyResponse.headers.set("Access-Control-Allow-Origin", "*");
+    proxyResponse.headers.set("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
+    proxyResponse.headers.set("Access-Control-Allow-Headers", "*");
+
+    return proxyResponse;
+
   } catch (error) {
-    return response.status(500).send(`Error fetching the URL: ${error.message}`);
+    return new Response(`Error fetching the URL: ${error.message}`, {
+      status: 500,
+      headers: { "Content-Type": "text/plain" },
+    });
   }
 }
